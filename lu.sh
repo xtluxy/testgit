@@ -1,5 +1,5 @@
 #!/bin/bash
-
+mamama
 seginteger=$(ffprobe -show_entries format=duration $1 |grep duration |awk -F = '{print $2}')
 seginteger=$(($(echo ${seginteger%.*})/3))
 echo "seginteger is:" $seginteger
