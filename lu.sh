@@ -1,6 +1,6 @@
 #!/bin/bash
 mamama
-create new branch is quick
+create new branch is quick and good
 
 
 
