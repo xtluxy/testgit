@@ -1,30 +1,23 @@
 #!/bin/bash
 
-seginteger=$(ffprobe -show_entries format=duration $1 |grep duration |awk -F = '{print $2}')
-seginteger=$(($(echo ${seginteger%.*})/3))
+fragNum=3
+duration=$(ffprobe -show_entries format=duration $1 |grep duration |awk -F = '{print $2}')
+echo "duration is:" $duration
+seginteger=$(($(echo ${duration%.*})/$fragNum))
 echo "seginteger is:" $seginteger
-
-ffprobe -show_frames -select_streams v:0 -print_format csv $1 |awk '{if($0!="") print $0}'  >file1.bin
-stream_index=$(awk 'BEGIN{ FS="," } NR==1 {print $3}' file1.bin)
-echo "stream_index is:" $stream_index
-
-pkt_pts_time=$(awk 'BEGIN{ FS="," } NR==1 {print $6}' file1.bin)
-echo "pkt_pts_time is:" $pkt_pts_time
-
-grep -n frame,video,$stream_index,1 file1.bin|
-awk 'BEGIN { FS="," } { if("'$pkt_pts_time'" =="N/A") print $1 " " $8 ; else print $1 " " $6}'|
-sed 's/:frame//g' > file2.bin
-fFStart=$(awk 'BEGIN{ FS=" " } NR==1 {print $2}' file2.bin)
+fFStart=$(ffprobe -show_entries format=start_time $1 |grep start_time |awk -F = '{print $2}')
 echo "fFStart is:" $fFStart
 
-rm -f file3.bin
-awk 'BEGIN {splitStart="'$fFStart'" }   
-     {  split($2,time,"."); current=time[1]; 
-        if (current-splitStart >= "'$seginteger'"+0)
-         { print $0;splitStart=current; }
-      }' file2.bin >> file3.bin
+rm -f file4.bin
+for (( i=1; i<=$fragNum; i++ )) 
+do  
+ffprobe -show_frames -select_streams v:0 -read_intervals $(awk 'BEGIN{print "'$i'"*"'$seginteger'";}')%+$seginteger -i $1 -print_format csv |
+awk 'BEGIN{ FS="," }{if($4 == 1){print $0;exit 1;}}'|
+awk 'BEGIN { FS="," } { if($6 =="N/A") print $8 ; else print $6}' >>file4.bin
+done
 
-startTime=$(awk '{st=st" "$2}END{print st}' file3.bin) 
+startTime=$(awk '{st=st" "$1}END{print st}' file4.bin) 
+echo $startTime
 stArray[0]=0
 echo ${stArray[0]}
 i=1
@@ -46,6 +39,7 @@ do
     echo ${intervalArray[$i]}  
 done 
 
+rm -f file.txt
 for (( i=0; i<${#stArray[*]}; i++ ))
 do
     echo "stArray is:" ${stArray[$i]}
@@ -56,4 +50,7 @@ do
     else
         ffmpeg -ss ${stArray[$i]} -i $1 -y $1_test$i.mp4
     fi
+    awk 'BEGIN{print "file '\''"  "'$1'" "_test" "'$i'" ".mp4'\''" }' >>file.txt
 done
+
+ffmpeg -f concat -i file.txt -c copy $1_concat.mp4
