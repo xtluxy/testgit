@@ -44,7 +44,10 @@ for (( i=0; i<${#stArray[*]}; i++ ))
 do
     echo "stArray is:" ${stArray[$i]}
     echo "intervalArray is:" ${intervalArray[$i]}
-    if [ ${intervalArray[$i]} != -1 ]
+    if [ $i == 0 ]
+    then 
+        ffmpeg -t ${intervalArray[$i]} -i $1 -y $1_test$i.mp4 
+    elif [ ${intervalArray[$i]} != -1 ]
     then
         ffmpeg -ss ${stArray[$i]} -t ${intervalArray[$i]} -i $1 -y $1_test$i.mp4 
     else
