@@ -61,22 +61,22 @@ class SliceTransClass:
       else:
           cmd = "ffmpeg -ss " + str(self.__stArray[i])+ " -t " + str(self.__intervalArray[i])
           cmd += " -vb " +str(self. __averageBitrate)
-          cmd += " -i " + self.__filepath + " -y " + self.__filepath +"_test"+str(i)+".mp4"
-      logging.info("sliceTranscoding(): %s", cmd)     
+          cmd += " -i " + self.__filepath + " -y " + self.__filepath +"_test"+str(i)+".mp4"    
       process=subprocess.Popen(cmd, stderr=subprocess.PIPE, shell=True)
-      while process.poll() is None:
-          process.stderr.read()
+      output =process.communicate()[1]
+      logging.info("sliceTranscoding(): %s", cmd) 
+      logging.info("%s", output.decode()) 
           
  def concatSlices(self):
    f = open('file.txt', 'w')
    for i in range(0,self.__sliceSum):
        f.write("file \'" + self.__filepath + "_test" + str(i) + ".mp4\'\n")
    f.close( )
-   cmd="ffmpeg -f concat -i file.txt -c copy " + self.__filepath +"_concat.mp4"
-   logging.info("concatSlices(): %s", cmd)
-   process=subprocess.Popen(cmd, stderr=subprocess.PIPE, shell=True)
-   while process.poll() is None:
-       process.stderr.read()
+   cmd="ffmpeg -f concat -i file.txt -c copy -y " + self.__filepath +"_concat.mp4"
+   process=subprocess.Popen(cmd, stderr=subprocess.PIPE, shell=True)    
+   output =process.communicate()[1]
+   logging.info("concatSlices(): %s", cmd) 
+   logging.info("%s", output.decode()) 
    
    
  def __init__(self,filepath,sliceSum):
@@ -118,10 +118,11 @@ class SliceTransClass:
     for i in range(0,self.__sliceSum-1):
         cmd="ffmpeg -ss " + self.__sliceStartTime[i] + " -t 30 -i " + self.__filepath + " -c:v libx264 -crf 32 -an -f mp4 -y null"
     #   cmd="ffmpeg -ss " + self.__sliceStartTime[i] + " -t 30 -i " + self.__filepath
-    #   cmd+=" -c:v libx264 -crf 32 -an -f mp4 -y null 2>&1 |grep kb/s: |awk -F : '{print $2}'"
-        logging.info("get_averageBitrate(): %s", cmd)     
+    #   cmd+=" -c:v libx264 -crf 32 -an -f mp4 -y null 2>&1 |grep kb/s: |awk -F : '{print $2}'"   
         process=subprocess.Popen(cmd,stderr=subprocess.PIPE, shell=True)
         output =process.communicate()[1]
+        logging.info("get_averageBitrate(): %s", cmd) 
+        logging.info("%s", output.decode()) 
         m=re.search('kb/s:[\d|.]+',output.decode())
         if m:
             list=re.split(':',m.group())
