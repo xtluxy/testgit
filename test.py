@@ -51,21 +51,21 @@ class SliceTransClass:
  def sliceTranscoding(self):
   for i in range(0,self.__sliceSum):
       if i == 0:
-          cmd = "ffmpeg -t " + str(self.__intervalArray[i])
-          cmd+= " -vb " +str(self. __averageBitrate)
-          cmd+= " -i " + self.__filepath + " -y " + self.__filepath +"_test"+str(i)+".mp4" 
+          cmd = "ffmpeg -t " + str(self.__intervalArray[i])+ " -i " + self.__filepath + " -c:v libx264"
+          cmd+= " -vb " +str(self. __averageBitrate)+"k -an"
+          cmd+=  " -y " + self.__filepath +"_test"+str(i)+".mp4" 
       elif i == self.__sliceSum-1:
-          cmd = "ffmpeg -ss " + str(self.__stArray[self.__sliceSum-1])
-          cmd+= " -vb " +str(self. __averageBitrate) 
-          cmd+= " -i " + self.__filepath + " -y " + self.__filepath +"_test"+str(i)+".mp4" 
+          cmd = "ffmpeg -ss " + str(self.__stArray[self.__sliceSum-1])+ " -i " + self.__filepath + " -c:v libx264"
+          cmd+= " -vb " +str(self. __averageBitrate)+"k -an" 
+          cmd+= " -y " + self.__filepath +"_test"+str(i)+".mp4" 
       else:
-          cmd = "ffmpeg -ss " + str(self.__stArray[i])+ " -t " + str(self.__intervalArray[i])
-          cmd += " -vb " +str(self. __averageBitrate)
-          cmd += " -i " + self.__filepath + " -y " + self.__filepath +"_test"+str(i)+".mp4"    
+          cmd = "ffmpeg -ss " + str(self.__stArray[i])+ " -t " + str(self.__intervalArray[i])+ " -i " + self.__filepath + " -c:v libx264"
+          cmd += " -vb " +str(self. __averageBitrate)+"k -an"
+          cmd += " -y " + self.__filepath +"_test"+str(i)+".mp4"    
       process=subprocess.Popen(cmd, stderr=subprocess.PIPE, shell=True)
       output =process.communicate()[1]
       logging.info("sliceTranscoding(): %s", cmd) 
-      logging.info("%s", output.decode()) 
+      logging.info("%s", output.decode('utf-8', errors='replace')) 
           
  def concatSlices(self):
    f = open('file.txt', 'w')
@@ -76,7 +76,7 @@ class SliceTransClass:
    process=subprocess.Popen(cmd, stderr=subprocess.PIPE, shell=True)    
    output =process.communicate()[1]
    logging.info("concatSlices(): %s", cmd) 
-   logging.info("%s", output.decode()) 
+   logging.info("%s", output.decode('utf-8', errors='replace')) 
    
    
  def __init__(self,filepath,sliceSum):
@@ -122,8 +122,8 @@ class SliceTransClass:
         process=subprocess.Popen(cmd,stderr=subprocess.PIPE, shell=True)
         output =process.communicate()[1]
         logging.info("get_averageBitrate(): %s", cmd) 
-        logging.info("%s", output.decode()) 
-        m=re.search('kb/s:[\d|.]+',output.decode())
+        logging.info("%s", output.decode('utf-8', errors='replace')) 
+        m=re.search('kb/s:[\d|.]+',output.decode('utf-8', errors='replace' ))
         if m:
             list=re.split(':',m.group())
             bitrate.append(list[1])                                     
