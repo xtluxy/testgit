@@ -29,7 +29,7 @@ class SliceTransClass:
      cmd="ffprobe -show_frames -select_streams v:0 -read_intervals "
      cmd+= str(self.__fFStart+self.__sliceDuration*i) + "%+" + str(self.__sliceDuration)
      cmd+=" -i " + self.__filepath + " -print_format csv"
-     logging.info("get_sliceStartTime(): %s", cmd)
+     logging.info("get_sliceStartTime func:%s", cmd)
      output = os.popen(cmd)
      lines = output.readlines()
      for line in lines:
@@ -49,23 +49,30 @@ class SliceTransClass:
     self.__intervalArray.append(0)   
    
  def sliceTranscoding(self):
+  processes=[]
   for i in range(0,self.__sliceSum):
       if i == 0:
           cmd = "ffmpeg -t " + str(self.__intervalArray[i])+ " -i " + self.__filepath + " -c:v libx264"
           cmd+= " -vb " +str(self. __averageBitrate)+"k -an"
-          cmd+=  " -y " + self.__filepath +"_test"+str(i)+".mp4" 
+          cmd+=  " -y " + self.__filepath +"_test"+str(i)+".mp4 &" 
       elif i == self.__sliceSum-1:
           cmd = "ffmpeg -ss " + str(self.__stArray[self.__sliceSum-1])+ " -i " + self.__filepath + " -c:v libx264"
           cmd+= " -vb " +str(self. __averageBitrate)+"k -an" 
-          cmd+= " -y " + self.__filepath +"_test"+str(i)+".mp4" 
+          cmd+= " -y " + self.__filepath +"_test"+str(i)+".mp4 &" 
       else:
           cmd = "ffmpeg -ss " + str(self.__stArray[i])+ " -t " + str(self.__intervalArray[i])+ " -i " + self.__filepath + " -c:v libx264"
           cmd += " -vb " +str(self. __averageBitrate)+"k -an"
-          cmd += " -y " + self.__filepath +"_test"+str(i)+".mp4"    
-      process=subprocess.Popen(cmd, stderr=subprocess.PIPE, shell=True)
-      output =process.communicate()[1]
-      logging.info("sliceTranscoding(): %s", cmd) 
-      logging.info("%s", output.decode('utf-8', errors='replace')) 
+          cmd += " -y " + self.__filepath +"_test"+str(i)+".mp4 &"    
+      logging.info("sliceTranscoding(): %s", cmd)     
+
+      p=subprocess.Popen(cmd, stderr=subprocess.PIPE,shell=True)
+      processes.append(p)
+          
+  logging.info("processes list: %s", processes)  
+  for p in processes:
+    output =p.communicate()[1]
+    logging.info("%s", output.decode('utf-8', 'replace'))   
+  logging.info("processes finished")
           
  def concatSlices(self):
    f = open('file.txt', 'w')
@@ -75,8 +82,8 @@ class SliceTransClass:
    cmd="ffmpeg -f concat -i file.txt -c copy -y " + self.__filepath +"_concat.mp4"
    process=subprocess.Popen(cmd, stderr=subprocess.PIPE, shell=True)    
    output =process.communicate()[1]
-   logging.info("concatSlices(): %s", cmd) 
-   logging.info("%s", output.decode('utf-8', errors='replace')) 
+   logging.info("concatSlices func:%s", cmd) 
+   logging.info("%s", output.decode('utf-8', 'replace')) 
    
    
  def __init__(self,filepath,sliceSum):
@@ -93,8 +100,8 @@ class SliceTransClass:
      self.__duration=float(self.get_duration())
      self.__sliceDuration=self.get_sliceDuration()
      self.__fFStart=float(self.get_fFStart())   
-     logging.info("self.__filepath: %s, self.__sliceSum: %d", self.__filepath, self.__sliceSum)
-     logging.info("self.__duration: %f, self.__sliceDuration: %f, self.__fFStart: %f", self.__duration, self.__sliceDuration,self.__fFStart)
+     logging.info("filepath: %s, sliceSum: %d", filepath, self.__sliceSum)
+     logging.info("duration: %f, sliceDuration: %f, fFStart: %f", self.__duration, self.__sliceDuration,self.__fFStart)
 
      self.__sliceStartTime=[] 
      self.__stArray=[]
@@ -104,10 +111,10 @@ class SliceTransClass:
      self.get_intervalArray()     
      self.__averageBitrate=self.get_averageBitrate()
      
-     logging.info("self.__sliceStartTime: %s", self.__sliceStartTime)
-     logging.info("self.__stArray: %s", self.__stArray)
-     logging.info("self.__intervalArray: %s", self.__intervalArray)
-     logging.info("self.__averageBitrate: %s", self.__averageBitrate)
+     logging.info("sliceStartTime: %s", self.__sliceStartTime)
+     logging.info("stArray: %s", self.__stArray)
+     logging.info("intervalArray: %s", self.__intervalArray)
+     logging.info("averageBitrate: %s", self.__averageBitrate)
      
  def __del__(self):
     pass
@@ -121,13 +128,16 @@ class SliceTransClass:
     #   cmd+=" -c:v libx264 -crf 32 -an -f mp4 -y null 2>&1 |grep kb/s: |awk -F : '{print $2}'"   
         process=subprocess.Popen(cmd,stderr=subprocess.PIPE, shell=True)
         output =process.communicate()[1]
-        logging.info("get_averageBitrate(): %s", cmd) 
-        logging.info("%s", output.decode('utf-8', errors='replace')) 
-        m=re.search('kb/s:[\d|.]+',output.decode('utf-8', errors='replace' ))
+        logging.info("get_averageBitrate func:%s", cmd) 
+        logging.info("%s", output.decode('utf-8', 'replace')) 
+        m=re.search('kb/s:[\d|.]+',output.decode('utf-8', 'replace' ))
         if m:
             list=re.split(':',m.group())
             bitrate.append(list[1])                                     
-    logging.info("bitrate=%s", bitrate) 
+    logging.info("get_averageBitrate func:bitrate=%s", bitrate) 
+    bitrate.sort()
+    bitrate=bitrate[1:]
+    logging.info("get_averageBitrate func:after del minValue,bitrate=%s", bitrate)
     for i in range(0,len(bitrate)):
        count+=float(bitrate[i])
     count/=len(bitrate)
