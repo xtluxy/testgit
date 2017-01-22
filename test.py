@@ -47,39 +47,67 @@ class SliceTransClass:
     for i in range(0,len(self.__stArray)-1):
        self.__intervalArray.append(self.__stArray[i+1]-self.__stArray[i])
     self.__intervalArray.append(0)   
-   
- def sliceTranscoding(self):
+ 
+ def sliceTranscoding(self): 
+     self.sliceTranscodingPass1()
+     self.sliceTranscodingPass2() 
+      
+ def sliceTranscodingPass1(self):
   processes=[]
   for i in range(0,self.__sliceSum):
       if i == 0:
-          cmd = "ffmpeg -t " + str(self.__intervalArray[i])+ " -i " + self.__filepath + " -c:v libx264"
-          cmd+= " -vb " +str(self. __averageBitrate)+"k -an"
-          cmd+=  " -y " + self.__filepath +"_test"+str(i)+".mp4 &" 
+          cmd = "ffmpeg -t " + str(self.__intervalArray[i])+ " -i " + self.__filepath + " -c:v libx264 -pass 1 -passlogfile " + self.__filepath +str(i) 
+          cmd+= " -vb " +str(self. __averageBitrate)
+          cmd+=  "k -c:a aac -ac 2 -f mpegts -y null &" 
       elif i == self.__sliceSum-1:
-          cmd = "ffmpeg -ss " + str(self.__stArray[self.__sliceSum-1])+ " -i " + self.__filepath + " -c:v libx264"
-          cmd+= " -vb " +str(self. __averageBitrate)+"k -an" 
-          cmd+= " -y " + self.__filepath +"_test"+str(i)+".mp4 &" 
+          cmd = "ffmpeg -ss " + str(self.__stArray[self.__sliceSum-1])+ " -i " + self.__filepath + " -c:v libx264 -pass 1 -passlogfile " + self.__filepath +str(i) 
+          cmd+= " -vb " +str(self. __averageBitrate)
+          cmd+= "k -c:a aac -ac 2 -f mpegts -y null &" 
       else:
-          cmd = "ffmpeg -ss " + str(self.__stArray[i])+ " -t " + str(self.__intervalArray[i])+ " -i " + self.__filepath + " -c:v libx264"
-          cmd += " -vb " +str(self. __averageBitrate)+"k -an"
-          cmd += " -y " + self.__filepath +"_test"+str(i)+".mp4 &"    
-      logging.info("sliceTranscoding(): %s", cmd)     
-
+          cmd = "ffmpeg -ss " + str(self.__stArray[i])+ " -t " + str(self.__intervalArray[i])+ " -i " + self.__filepath + " -c:v libx264 -pass 1 -passlogfile " + self.__filepath +str(i)
+          cmd += " -vb " +str(self. __averageBitrate)
+          cmd += "k -c:a aac -ac 2 -f mpegts -y null &"  
+      logging.info("sliceTranscodingPass1 func: %s", cmd)     
       p=subprocess.Popen(cmd, stderr=subprocess.PIPE,shell=True)
       processes.append(p)
-          
-  logging.info("processes list: %s", processes)  
+              
+  logging.info("pass1 processes list: %s", processes)  
   for p in processes:
     output =p.communicate()[1]
     logging.info("%s", output.decode('utf-8', 'replace'))   
-  logging.info("processes finished")
+  logging.info("pass1 processes finished")
+  
+ def sliceTranscodingPass2(self):
+  processes=[]
+  for i in range(0,self.__sliceSum):
+      if i == 0:
+          cmd = "ffmpeg -t " + str(self.__intervalArray[i])+ " -i " + self.__filepath + " -c:v libx264 -pass 2 -passlogfile " + self.__filepath +str(i) 
+          cmd+= " -vb " +str(self. __averageBitrate)
+          cmd+= "k -c:a aac -ac 2 -ab 32k -f mpegts -y " + self.__filepath +"_test"+str(i)+".ts &" 
+      elif i == self.__sliceSum-1:
+          cmd = "ffmpeg -ss " + str(self.__stArray[self.__sliceSum-1])+ " -i " + self.__filepath + " -c:v libx264 -pass 2 -passlogfile " + self.__filepath +str(i) 
+          cmd+= " -vb " +str(self. __averageBitrate)
+          cmd+= "k -c:a aac -ac 2 -ab 32k -f mpegts -y " + self.__filepath +"_test"+str(i)+".ts &" 
+      else:
+          cmd = "ffmpeg -ss " + str(self.__stArray[i])+ " -t " + str(self.__intervalArray[i])+ " -i " + self.__filepath + " -c:v libx264 -pass 2 -passlogfile " + self.__filepath +str(i)
+          cmd += " -vb " +str(self. __averageBitrate)
+          cmd += "k -c:a aac -ac 2 -ab 32k -f mpegts -y " + self.__filepath +"_test"+str(i)+".ts &"
+      logging.info("sliceTranscodingPass2 func: %s", cmd)     
+      p=subprocess.Popen(cmd, stderr=subprocess.PIPE,shell=True)
+      processes.append(p)
+          
+  logging.info("pass2 processes list: %s", processes)  
+  for p in processes:
+    output =p.communicate()[1]
+    logging.info("%s", output.decode('utf-8', 'replace'))   
+  logging.info("pass2 processes finished")
           
  def concatSlices(self):
    f = open('file.txt', 'w')
    for i in range(0,self.__sliceSum):
-       f.write("file \'" + self.__filepath + "_test" + str(i) + ".mp4\'\n")
+       f.write("file \'" + self.__filepath + "_test" + str(i) + ".ts\'\n")
    f.close( )
-   cmd="ffmpeg -f concat -i file.txt -c copy -y " + self.__filepath +"_concat.mp4"
+   cmd="ffmpeg -f concat -safe 0 -i file.txt -c copy -y " + self.__filepath +"_concat.ts"
    process=subprocess.Popen(cmd, stderr=subprocess.PIPE, shell=True)    
    output =process.communicate()[1]
    logging.info("concatSlices func:%s", cmd) 
