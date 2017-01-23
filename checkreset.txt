@@ -1,1 +1,2 @@
 checkreset.txt version1
+add version2
